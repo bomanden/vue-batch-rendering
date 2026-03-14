@@ -1,1 +1,1 @@
-# Vue 3 + TypeScript + Vite - small test with batch rendering 
+## Vue 3 + TypeScript + Vite - small test with batch rendering 
