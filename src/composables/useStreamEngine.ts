@@ -3,51 +3,45 @@ import { useStreamStore } from "@/stores/streamStore"
 export function useStreamEngine() {
 
   const store = useStreamStore()
+  const size = store.streams.length
 
-  // non-reactive high frequency buffer
-  const buffer = new Float32Array(store.streams.length)
+  // shared memory: worker writes, main thread reads — zero copy
+  const sab     = new SharedArrayBuffer(size * Float32Array.BYTES_PER_ELEMENT)
+  const flagSab = new SharedArrayBuffer(4)
+  const flag    = new Int32Array(flagSab)
+
+  // point the store at the shared buffer once, use tick() from here on
+  store.setSnapshot(new Float32Array(sab))
+
+  const worker = new Worker(
+    new URL('../workers/streamWorker.ts', import.meta.url),
+    { type: 'module' }
+  )
+  worker.postMessage({ type: 'init', sab, flagSab })
 
   let running = false
   let rafId: number | null = null
-  let timer: number | null = null
-
-  function generateData() {
-    for (let i = 0; i < buffer.length; i++) {
-      buffer[i] = Math.random() * 2 - 1
-    }
-  }
 
   function updateUI() {
-    // copy buffer snapshot to reactive store
-    store.setSnapshot(buffer.slice())
-
-    if (running) {
-      rafId = requestAnimationFrame(updateUI)
+    // dirty flag: only re-render if worker wrote new data since last frame
+    if (Atomics.exchange(flag, 0, 0) === 1) {
+      store.tick()
     }
+    if (running) rafId = requestAnimationFrame(updateUI)
   }
 
   function start() {
-
     if (running) return
     running = true
-
-    // high-frequency producer
-    timer = setInterval(generateData, 5)
-
-    // UI throttled to screen refresh
+    worker.postMessage({ type: 'start' })
     rafId = requestAnimationFrame(updateUI)
   }
 
   function stop() {
-
     running = false
-
-    if (timer) clearInterval(timer)
+    worker.postMessage({ type: 'stop' })
     if (rafId) cancelAnimationFrame(rafId)
   }
 
-  return {
-    start,
-    stop
-  }
+  return { start, stop }
 }
