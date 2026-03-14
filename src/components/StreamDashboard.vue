@@ -24,7 +24,7 @@ const { start, stop } = useStreamEngine()
           background: v > 0 ? '#d4ffd4' : '#ffd4d4'
         }"
       >
-        {{ i }} : {{ v.toFixed(3) }}
+        {{ String(i).padStart(3, '0')  }} : {{ Math.abs(v).toFixed(3) }}
       </div>
 
     </div>
@@ -43,6 +43,7 @@ const { start, stop } = useStreamEngine()
 .stream{
   padding:6px;
   font-size:12px;
+  font-family: monospace;
   border:1px solid #ccc;
 }
 </style>

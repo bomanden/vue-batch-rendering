@@ -5,7 +5,7 @@ export function useStreamEngine() {
   const store = useStreamStore()
 
   // non-reactive high frequency buffer
-  const buffer = new Float32Array(50)
+  const buffer = new Float32Array(store.streams.length)
 
   let running = false
   let rafId: number | null = null
